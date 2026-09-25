@@ -1,0 +1,51 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ "main" ] # Akan berjalan otomatis saat ada perubahan di branch main
+  workflow_dispatch: # Mengizinkan Anda menekan tombol "Run workflow" secara manual
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Install Cordova
+      run: npm install -g cordova
+
+    - name: Create Cordova Project & Build
+      run: |
+        # Membuat project Cordova kosong
+        cordova create build_app com.official.web "WebOfficialApp"
+        
+        # Mengosongkan folder www bawaan Cordova
+        rm -rf build_app/www/*
+        
+        # Memindahkan semua file web Anda (termasuk folder assets) ke dalam Cordova
+        rsync -av --exclude='build_app' --exclude='.git' --exclude='.github' ./ build_app/www/
+        
+        # Membangun platform Android
+        cd build_app
+        cordova platform add android
+        cordova build android
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: aplikasi-web-apk
+        path: build_app/platforms/android/app/build/outputs/apk/debug/app-debug.apk
+        
